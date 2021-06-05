@@ -54,8 +54,6 @@ function init() {
     const material = new THREE.ShaderMaterial( {
         uniforms: {
             color: { value: new THREE.Color( 0x00ead3 ) },
-            opacity:0.5,
-            blending:THREE.AdditiveBlending
         },
         vertexShader: document.getElementById( 'vertexshader' ).textContent,
         fragmentShader: document.getElementById( 'fragmentshader' ).textContent
