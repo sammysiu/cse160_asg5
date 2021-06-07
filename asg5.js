@@ -28,7 +28,7 @@ file.onchange = function() {
     audio.classList.add('active');
     var files = this.files;
 
-    // get the audio file form the possible array of files, the user uploaded
+    // get the audio file from the possible array of files, the user uploaded
     audio.src = URL.createObjectURL(files[0]);
     // load the file, and then play it - all using HTML5 audio element's API
     audio.volume = 0.5;
@@ -108,7 +108,7 @@ for ( let ix = 0; ix < AMOUNTX; ix ++ ) {
 
 }
 
-// Creates particles
+// Creates the particles
 const particleGeometry = new THREE.BufferGeometry();
 particleGeometry.setAttribute( 'position', new THREE.BufferAttribute( positions, 3 ) );
 particleGeometry.setAttribute( 'scale', new THREE.BufferAttribute( scales, 1 ) );
@@ -129,8 +129,8 @@ scene.add( particles );
 // const geometry = new THREE.BoxGeometry();
 const cylinderGeometry = new THREE.CylinderGeometry(1, 1, 5, 32);
 // const material = new THREE.MeshBasicMaterial( { color: 0xff0000 } );
-const phongMaterial1 = new THREE.MeshPhongMaterial( { color: 0xff00ff, shininess: 16 } );
-const phongMaterial2 = new THREE.MeshPhongMaterial( { color: 0x11bbff, shininess: 16 } );
+const phongMaterial1 = new THREE.MeshPhongMaterial( { color: 0xff00ff, shininess: 16, wireframe: true } );
+const phongMaterial2 = new THREE.MeshPhongMaterial( { color: 0x11bbff, shininess: 16, wireframe: true } );
 const cylinder1 = new THREE.Mesh(cylinderGeometry, phongMaterial1);
 const cylinder2 = new THREE.Mesh(cylinderGeometry, phongMaterial2);
 
@@ -152,6 +152,15 @@ scene.add(cylinder1);
 scene.add(cylinder2);
 
 
+
+// Creates the ball
+const icosahedronGeometry = new THREE.IcosahedronGeometry(10, 4);
+const lambertMaterial = new THREE.MeshLambertMaterial( { color: 0x11ffaa, wireframe: true } );
+
+const ball = new THREE.Mesh(icosahedronGeometry, lambertMaterial);
+ball.position.set(0, 1250, 0);
+ball.scale.set(SCALE/3, SCALE/3, SCALE/3);
+scene.add(ball);
 
 // White directional light at half intensity shining from the top.
 const directionalLight = new THREE.SpotLight( 0xffffff );
@@ -226,17 +235,23 @@ function play() {
         var upperAvgFr = upperAvg / upperHalfArray.length;
         /************************************************/
     
-        // Examples of animation
+        // Cylinder length scales off avg bass db
         cylinder1.scale.y = cylinder2.scale.y = Math.sin(lowerAvgFr) * SCALE;
+        // Ball size scales off of avg treble db
+        ball.scale.set(Math.sin(upperAvgFr) * SCALE, Math.sin(upperAvgFr) * SCALE, Math.sin(upperAvgFr) * SCALE);
         // cylinder1.scale.x = cylinder2.scale.x = Math.sin(lowerMaxFr) * SCALE;
         // cylinder1.scale.z = cylinder2.scale.z = Math.sin(upperAvgFr) * SCALE;
         //cylinder.geometry.attributes.scale.needsUpdate = true;
         time += 0.01;
 
-        makeRough(cylinder1, modulate(Math.pow(lowerMaxFr, 0.8), 0, 1, 0, 8), modulate(upperAvgFr, 0, 1, 0, 4));
-        makeRough(cylinder2, modulate(Math.pow(lowerMaxFr, 0.8), 0, 1, 0, 8), modulate(upperAvgFr, 0, 1, 0, 4));
+        makeRough(cylinder1, cylinder1.geometry.parameters.radiusTop, modulate(Math.pow(lowerMaxFr, 0.8), 0, 1, 0, 8), modulate(upperAvgFr, 0, 1, 0, 4));
+        makeRough(cylinder2, cylinder2.geometry.parameters.radiusTop,  modulate(Math.pow(lowerMaxFr, 0.8), 0, 1, 0, 8), modulate(upperAvgFr, 0, 1, 0, 4));
 
-        moveParticles(particles, count, modulate(upperAvgFr, 0, 1, 0, 4));
+        makeRough(ball, ball.geometry.parameters.radius,  modulate(Math.pow(lowerMaxFr, 0.8), 0, 1, 0, 8), modulate(upperAvgFr, 0, 1, 0, 4));
+
+        // Particle positions scale off of avg treble db,
+            // while scales scale off of avg bass db
+        moveParticles(particles, count, modulate(upperAvgFr, 0, 1, 0, 4), modulate(lowerAvgFr, 0, 1, 0, 4));
         
         count += 0.1;
     
@@ -245,7 +260,7 @@ function play() {
     }
     
     /* Adapted from Music Visualizer by Prakhar Bhardwaj */
-    function makeRough(mesh, bassFr, treFr) {
+    function makeRough(mesh, offset, bassFr, treFr) {
         for (let i = 0; i < mesh.geometry.attributes.position.array.length; i += 3) {
             let x = mesh.geometry.attributes.position.array[i];
             let y = mesh.geometry.attributes.position.array[i + 1];
@@ -253,7 +268,6 @@ function play() {
     
             let vertex = new THREE.Vector3(x, y, z);
     
-            let offset = (mesh.geometry.parameters.radiusTop);
             let amp = 1;
             let time = window.performance.now();
             vertex.normalize();
@@ -274,7 +288,7 @@ function play() {
     }
     /************************************************/
     
-    function moveParticles(particles, count, sync) {
+    function moveParticles(particles, count, sync1, sync2) {
         const positions = particles.geometry.attributes.position.array;
         const scales = particles.geometry.attributes.scale.array;
     
@@ -286,10 +300,11 @@ function play() {
     
                 positions[ i + 1 ] =( ( Math.sin( ( ix + count ) * 0.3) * 50) +
                                       ( Math.sin( ( iy + count ) * 0.5) * 50) ) 
-                                    * (sync * 5);
+                                    * (sync1 * 5);
     
-                scales[ j ] = ( Math.sin( ( ix + count ) * 0.3) + 1 ) * 20 +
-                              ( Math.sin( ( iy + count ) * 0.5) + 1 ) * 20;
+                scales[ j ] = ( ( Math.sin( ( ix + count ) * 0.3) + 1 ) * 20 +
+                                ( Math.sin( ( iy + count ) * 0.5) + 1 ) * 20 )
+                              * (sync2 / 5);
     
                 i += 3;
                 j ++;
