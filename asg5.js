@@ -8,7 +8,7 @@ Adapted from Music Visualizer by Prakhar Bhardwaj and Lab5 by TA Lucas
 
 // Base code used for particles creation:
 // https://threejs.org/examples/webgl_points_waves.html
-const SEPARATION = 100, AMOUNTX = 50, AMOUNTY = 50;
+const SEPARATION = 100, AMOUNTX = 50, AMOUNTY = 50, SCALE = 10;
 
 /* Copied from Music Visualizer by Prakhar Bhardwaj */
 //initialise simplex noise instance
@@ -57,30 +57,37 @@ function max(arr){
 }
 /************************************************/
 
+
+
 const scene = new THREE.Scene();
 
-let container;
-let camera, scene, renderer;
-
-let particles, count = 0;
-
-let windowHalfX = window.innerWidth / 2;
-let windowHalfY = window.innerHeight / 2;
-
-container = document.createElement( 'div' );
-document.body.appendChild( container );
-
-camera = new THREE.PerspectiveCamera( 75, window.innerWidth / window.innerHeight, 1, 10000 );
+// const camera = new THREE.PerspectiveCamera(60, window.innerWidth/window.innerHeight, 0.1, 1000);
+// const camera = new THREE.OrthographicCamera( -1, 1, 1, -1, 0.1, 1000 );
+const camera = new THREE.PerspectiveCamera( 75, window.innerWidth / window.innerHeight, 1, 10000 );
 camera.position.set( 3000, 3000, 3000 );
 
-scene = new THREE.Scene();
+// Creates a rendering context (similar to canvas.getContext(webgl))
+const renderer = new THREE.WebGLRenderer();
+// renderer = new THREE.WebGLRenderer( { antialias: true , preserveDrawingBuffer: true } );
+renderer.setSize(window.innerWidth, window.innerHeight);
+
+// const composer = new EffectComposer( renderer );
+
+// Create camera controls
+const controls = new THREE.OrbitControls(camera, renderer.domElement);
+camera.position.z = 10;
+controls.update(); //controls.update() must be called after any manual changes to the camera's transform
+
+// stats = new Stats();
+
+// Adds a canvas element with that context to the HTML body
+document.body.appendChild(renderer.domElement);
+
+
 
 const numParticles = AMOUNTX * AMOUNTY;
-
 const positions = new Float32Array( numParticles * 3 ); // 3 vertices per particle
 const scales = new Float32Array( numParticles );
-
-
 let i = 0, j = 0;
 // Calculate positions and scales of particles
 for ( let ix = 0; ix < AMOUNTX; ix ++ ) {
@@ -100,10 +107,10 @@ for ( let ix = 0; ix < AMOUNTX; ix ++ ) {
 
 }
 
+// Creates particles
 const particleGeometry = new THREE.BufferGeometry();
 particleGeometry.setAttribute( 'position', new THREE.BufferAttribute( positions, 3 ) );
 particleGeometry.setAttribute( 'scale', new THREE.BufferAttribute( scales, 1 ) );
-
 const particleMaterial = new THREE.ShaderMaterial( {
     uniforms: {
         color: { value: new THREE.Color( 0x00ead3 ) },
@@ -112,43 +119,34 @@ const particleMaterial = new THREE.ShaderMaterial( {
     fragmentShader: document.getElementById( 'fragmentshader' ).textContent
 
 } );
-
-particles = new THREE.Points( particleGeometry, particleMaterial );
+const particles = new THREE.Points( particleGeometry, particleMaterial );
 scene.add( particles );
 
-//
 
-renderer = new THREE.WebGLRenderer( { antialias: true , preserveDrawingBuffer: true } );
-renderer.setPixelRatio( window.devicePixelRatio );
-renderer.setSize( window.innerWidth, window.innerHeight );
-container.appendChild( renderer.domElement );
-// const composer = new EffectComposer( renderer );
-const controls = new THREE.OrbitControls(camera, renderer.domElement);
-controls.update();
-// stats = new Stats();
-// container.appendChild( stats.dom );
-
-container.style.touchAction = 'none';
-
-camera.position.z = 10;
-controls.update(); //controls.update() must be called after any manual changes to the camera's transform
-
-// Adds a canvas element with that context to the HTML body
-document.body.appendChild(renderer.domElement);
 
 // Creates a cylinder
 // const geometry = new THREE.BoxGeometry();
-const geometry = new THREE.CylinderGeometry(1, 1, 5, 32 );
+const cylinderGeometry = new THREE.CylinderGeometry(1, 1, 5, 32);
 // const material = new THREE.MeshBasicMaterial( { color: 0xff0000 } );
 const phongMaterial = new THREE.MeshPhongMaterial( { color: 0xffff00, shininess: 16 } );
-const cylinder = new THREE.Mesh(geometry, phongMaterial);
+const cylinder = new THREE.Mesh(cylinderGeometry, phongMaterial);
 
 // Examples of transformations
-cylinder.position.x = 1;
-cylinder.position.y = -1;
-cylinder.rotation.z = 45;
+cylinder.position.x = 0;
+cylinder.position.y = 0;
+cylinder.position.z = 100;
+
+cylinder.rotation.x = 0;
+cylinder.rotation.y = 90;
+cylinder.rotation.z = 0;
+
+cylinder.scale.x = SCALE;
+cylinder.scale.y = SCALE;
+cylinder.scale.z = SCALE;
 
 scene.add(cylinder);
+
+
 
 // White directional light at half intensity shining from the top.
 const directionalLight = new THREE.DirectionalLight( 0xffffff, 1.0 );
@@ -166,6 +164,7 @@ light2.position.set(1, 1, 1);
 scene.add(light2);
 
 time = 0;
+count = 0;
 
 function play() {
     /*
@@ -202,7 +201,8 @@ function play() {
         /************************************************/
     
         // Examples of animation
-        cylinder.scale.y = Math.sin(lowerAvgFr);
+        cylinder.scale.y = Math.sin(lowerAvgFr) * SCALE;
+        //cylinder.geometry.attributes.scale.needsUpdate = true;
         time += 0.01;
 
         makeRough(cylinder, modulate(Math.pow(lowerMaxFr, 0.8), 0, 1, 0, 8), modulate(upperAvgFr, 0, 1, 0, 4));
