@@ -8,7 +8,7 @@ Adapted from Music Visualizer by Prakhar Bhardwaj and Lab5 by TA Lucas
 
 // Base code used for particles creation:
 // https://threejs.org/examples/webgl_points_waves.html
-const SEPARATION = 100, AMOUNTX = 50, AMOUNTY = 50, SCALE = 10;
+const SEPARATION = 100, AMOUNTX = 50, AMOUNTY = 50, SCALE = 100;
 
 /* Copied from Music Visualizer by Prakhar Bhardwaj */
 //initialise simplex noise instance
@@ -31,6 +31,7 @@ file.onchange = function() {
     // get the audio file form the possible array of files, the user uploaded
     audio.src = URL.createObjectURL(files[0]);
     // load the file, and then play it - all using HTML5 audio element's API
+    audio.volume = 0.5;
     audio.load();
     audio.play();
     play();
@@ -64,7 +65,7 @@ const scene = new THREE.Scene();
 // const camera = new THREE.PerspectiveCamera(60, window.innerWidth/window.innerHeight, 0.1, 1000);
 // const camera = new THREE.OrthographicCamera( -1, 1, 1, -1, 0.1, 1000 );
 const camera = new THREE.PerspectiveCamera( 75, window.innerWidth / window.innerHeight, 1, 10000 );
-camera.position.set( 3000, 3000, 3000 );
+camera.position.set( 3500, 1000, 3000 );
 
 // Creates a rendering context (similar to canvas.getContext(webgl))
 const renderer = new THREE.WebGLRenderer();
@@ -124,44 +125,69 @@ scene.add( particles );
 
 
 
-// Creates a cylinder
+// Creates the cylinders
 // const geometry = new THREE.BoxGeometry();
 const cylinderGeometry = new THREE.CylinderGeometry(1, 1, 5, 32);
 // const material = new THREE.MeshBasicMaterial( { color: 0xff0000 } );
-const phongMaterial = new THREE.MeshPhongMaterial( { color: 0xffff00, shininess: 16 } );
-const cylinder = new THREE.Mesh(cylinderGeometry, phongMaterial);
+const phongMaterial1 = new THREE.MeshPhongMaterial( { color: 0xff00ff, shininess: 16 } );
+const phongMaterial2 = new THREE.MeshPhongMaterial( { color: 0x11bbff, shininess: 16 } );
+const cylinder1 = new THREE.Mesh(cylinderGeometry, phongMaterial1);
+const cylinder2 = new THREE.Mesh(cylinderGeometry, phongMaterial2);
 
 // Examples of transformations
-cylinder.position.x = 0;
-cylinder.position.y = 0;
-cylinder.position.z = 100;
+cylinder1.position.x = -100;
+cylinder1.position.y = 250;
+cylinder1.position.z = -3300;
+cylinder2.position.x = -100;
+cylinder2.position.y = 250;
+cylinder2.position.z = 3200;
 
-cylinder.rotation.x = 0;
-cylinder.rotation.y = 90;
-cylinder.rotation.z = 0;
+cylinder1.rotation.x = cylinder2.rotation.x = 0.78;
+cylinder1.rotation.z = cylinder2.rotation.z = 1.57;
 
-cylinder.scale.x = SCALE;
-cylinder.scale.y = SCALE;
-cylinder.scale.z = SCALE;
+cylinder1.scale.x = cylinder1.scale.y = cylinder1.scale.z = SCALE;
+cylinder2.scale.x = cylinder2.scale.y = cylinder2.scale.z = SCALE;
 
-scene.add(cylinder);
+scene.add(cylinder1);
+scene.add(cylinder2);
 
 
 
 // White directional light at half intensity shining from the top.
-const directionalLight = new THREE.DirectionalLight( 0xffffff, 1.0 );
-directionalLight.target =
+const directionalLight = new THREE.SpotLight( 0xffffff );
+directionalLight.position.set(0,3000,0)
 scene.add(directionalLight);
 
 // Creates a point light source
-const light1 = new THREE.PointLight( 0xffffff, 1, 100 );
-light1.position.set(-1, -1, -1);
-scene.add(light1);
+// const light1 = new THREE.PointLight( 0xffffff, 1, 100 );
+// light1.position.set(-1, -1, -1);
+// scene.add(light1);
+// const light1 = new THREE.SpotLight(0xffffff);
+// light1.intensity = 1.0;
+// light1.position.set(-100, 250, 0);
+// light1.castShadow = false;
+// light1.lookAt(cylinder1);
+// scene.add(light1);
 
 // Creates a point light source
-const light2 = new THREE.PointLight( 0x00ff00, 1, 100 );
-light2.position.set(1, 1, 1);
-scene.add(light2);
+// const light2 = new THREE.PointLight( 0x00ff00, 1, 100 );
+// light2.position.set(1, 1, 1);
+// scene.add(light2);
+// const light2 = new THREE.SpotLight(0xffffff);
+// light2.intensity = 1.0;
+// light2.position.set(-100, 250, 0);
+// light2.castShadow = false;
+// light2.lookAt(cylinder2);
+// scene.add(light2);
+
+var ambientLight = new THREE.AmbientLight(0xffffff, 0.3);
+scene.add(ambientLight);
+
+function animate() {
+    requestAnimationFrame(animate);
+    renderer.render(scene, camera);
+}
+animate();
 
 time = 0;
 count = 0;
@@ -189,10 +215,10 @@ function play() {
 
         var overallAvg = avg(dataArray);
         // do some basic reductions/normalisations
-        var lowerMax = max(lowerHalfArray);
-        var lowerAvg = avg(lowerHalfArray);
-        var upperMax = max(upperHalfArray);
-        var upperAvg = avg(upperHalfArray);
+        var lowerMax = max(lowerHalfArray); // db of middle frequency
+        var lowerAvg = avg(lowerHalfArray); // avg db of lower frequencies
+        var upperMax = max(upperHalfArray); // db of highest frequency
+        var upperAvg = avg(upperHalfArray); // avg db of higher frequencies
 
         var lowerMaxFr = lowerMax / lowerHalfArray.length;
         var lowerAvgFr = lowerAvg / lowerHalfArray.length;
@@ -201,13 +227,16 @@ function play() {
         /************************************************/
     
         // Examples of animation
-        cylinder.scale.y = Math.sin(lowerAvgFr) * SCALE;
+        cylinder1.scale.y = cylinder2.scale.y = Math.sin(lowerAvgFr) * SCALE;
+        // cylinder1.scale.x = cylinder2.scale.x = Math.sin(lowerMaxFr) * SCALE;
+        // cylinder1.scale.z = cylinder2.scale.z = Math.sin(upperAvgFr) * SCALE;
         //cylinder.geometry.attributes.scale.needsUpdate = true;
         time += 0.01;
 
-        makeRough(cylinder, modulate(Math.pow(lowerMaxFr, 0.8), 0, 1, 0, 8), modulate(upperAvgFr, 0, 1, 0, 4));
+        makeRough(cylinder1, modulate(Math.pow(lowerMaxFr, 0.8), 0, 1, 0, 8), modulate(upperAvgFr, 0, 1, 0, 4));
+        makeRough(cylinder2, modulate(Math.pow(lowerMaxFr, 0.8), 0, 1, 0, 8), modulate(upperAvgFr, 0, 1, 0, 4));
 
-        moveParticles(particles, count);
+        moveParticles(particles, count, modulate(upperAvgFr, 0, 1, 0, 4));
         
         count += 0.1;
     
@@ -229,7 +258,7 @@ function play() {
             let time = window.performance.now();
             vertex.normalize();
             let rf = 0.00001;
-            let distance = (offset + bassFr ) + noise.noise3D(x + time * rf * 7, y + time * rf * 8, z + time * rf * 9) * amp * treFr;
+            let distance = (offset + bassFr) + noise.noise3D(x + time * rf * 7, y + time * rf * 8, z + time * rf * 9) * amp * treFr;
     
             vertex.multiplyScalar(distance);
     
@@ -245,7 +274,7 @@ function play() {
     }
     /************************************************/
     
-    function moveParticles(particles, count) {
+    function moveParticles(particles, count, sync) {
         const positions = particles.geometry.attributes.position.array;
         const scales = particles.geometry.attributes.scale.array;
     
@@ -255,11 +284,12 @@ function play() {
     
             for ( let iy = 0; iy < AMOUNTY; iy ++ ) {
     
-                positions[ i + 1 ] = ( Math.sin( ( ix + count ) * 0.3 ) * 50 ) +
-                                ( Math.sin( ( iy + count ) * 0.5 ) * 50 );
+                positions[ i + 1 ] =( ( Math.sin( ( ix + count ) * 0.3) * 50) +
+                                      ( Math.sin( ( iy + count ) * 0.5) * 50) ) 
+                                    * (sync * 5);
     
-                scales[ j ] = ( Math.sin( ( ix + count ) * 0.3 ) + 1 ) * 20 +
-                                ( Math.sin( ( iy + count ) * 0.5 ) + 1 ) * 20;
+                scales[ j ] = ( Math.sin( ( ix + count ) * 0.3) + 1 ) * 20 +
+                              ( Math.sin( ( iy + count ) * 0.5) + 1 ) * 20;
     
                 i += 3;
                 j ++;
